@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { loadConfig } from './lib/config.js';
 import { buildStatusJson, overlapsWindow, type StatusIssue } from './lib/status-core.js';
 
 interface GitHubIssueLabel {
@@ -27,8 +28,11 @@ const outputPath = outputArg?.slice('--output='.length) ?? 'site/status.json';
 
 async function main(): Promise<void> {
   const generatedAt = new Date();
+  const config = await loadConfig();
   const issues = (await fetchIssues()).filter((issue) => overlapsWindow(issue, generatedAt, 90));
-  const status = buildStatusJson(issues, generatedAt, { warn: (message) => console.warn(message) });
+  const status = buildStatusJson(issues, generatedAt, config.components, {
+    warn: (message) => console.warn(message),
+  });
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(status, null, 2)}\n`);
 }

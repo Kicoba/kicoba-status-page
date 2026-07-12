@@ -1,13 +1,14 @@
-import { readFile } from 'node:fs/promises';
+import { loadConfig } from './lib/config.js';
 import {
   apiStatusToProbeResults,
   type MonitorAction,
   type MonitorTarget,
   type ProbeResult,
+  type ProbeStatus,
   planMonitorActions,
   unreachableApiStatus,
 } from './lib/monitor-core.js';
-import { type ComponentId, parseIssue, type StatusIssue } from './lib/status-core.js';
+import { type ComponentDef, parseIssue, type StatusIssue } from './lib/status-core.js';
 
 interface GitHubIssueLabel {
   name?: string;
@@ -30,12 +31,22 @@ interface GitHubIssue {
 }
 
 async function main(): Promise<void> {
-  const config = JSON.parse(await readFile('monitor.config.json', 'utf8')) as MonitorTarget[];
-  const [results, openIncidents] = await Promise.all([runProbes(config), fetchOpenIncidents()]);
-  const actions = planMonitorActions(results, openIncidents, new Date());
+  const config = await loadConfig();
+  const validIds = new Set(config.components.map((component) => component.id));
+  const labelOf = buildLabelLookup(config.components);
+  const [results, openIncidents] = await Promise.all([
+    runProbes(config.probes),
+    fetchOpenIncidents(validIds),
+  ]);
+  const actions = planMonitorActions(results, openIncidents, new Date(), labelOf);
   for (const action of actions) {
     await executeAction(action);
   }
+}
+
+function buildLabelLookup(components: readonly ComponentDef[]): (id: string) => string {
+  const labels = new Map(components.map((component) => [component.id, component.label]));
+  return (id) => labels.get(id) ?? id;
 }
 
 async function runProbes(targets: readonly MonitorTarget[]): Promise<ProbeResult[]> {
@@ -53,22 +64,20 @@ async function runProbe(target: MonitorTarget): Promise<ProbeResult[]> {
       ];
     }
     if (!response.ok) {
-      return unreachableApiStatus();
+      return unreachableApiStatus(target.components);
     }
-    return apiStatusToProbeResults(
-      (await response.json()) as {
-        api: 'operational' | 'degraded' | 'outage';
-        agentExecution: 'operational' | 'degraded' | 'outage';
-      },
-    );
+    const payload = (await response.json()) as Record<string, ProbeStatus>;
+    return apiStatusToProbeResults(payload, target.components);
   } catch {
     return target.mode === 'api-status-json'
-      ? unreachableApiStatus()
+      ? unreachableApiStatus(target.components)
       : [{ component: target.component, status: 'outage' }];
   }
 }
 
-async function fetchOpenIncidents(): Promise<{ id: number; components: ComponentId[] }[]> {
+async function fetchOpenIncidents(
+  validIds: ReadonlySet<string>,
+): Promise<{ id: number; components: string[] }[]> {
   const token = requiredEnv('GITHUB_TOKEN');
   const repo = requiredEnv('GITHUB_REPOSITORY');
   const response = await fetch(
@@ -84,7 +93,7 @@ async function fetchOpenIncidents(): Promise<{ id: number; components: Component
   return issues
     .filter((issue) => !issue.pull_request)
     .map(toStatusIssue)
-    .map((issue) => parseIssue(issue))
+    .map((issue) => parseIssue(issue, validIds))
     .filter((issue): issue is NonNullable<typeof issue> => issue !== null)
     .map((issue) => ({ id: issue.id, components: issue.components }));
 }

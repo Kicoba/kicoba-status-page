@@ -1,5 +1,17 @@
-[
-  { "component": "landing", "urlEnv": "PROBE_URL_LANDING", "mode": "http-200" },
-  { "component": "dashboard", "urlEnv": "PROBE_URL_DASHBOARD", "mode": "http-200" },
-  { "component": "api", "urlEnv": "PROBE_URL_API_STATUS", "mode": "api-status-json" }
-]
+{
+  "components": [
+    { "id": "landing", "label": "Landing Page" },
+    { "id": "dashboard", "label": "Dashboard" },
+    { "id": "api", "label": "API" },
+    { "id": "agent-execution", "label": "Agent Execution" }
+  ],
+  "probes": [
+    { "urlEnv": "PROBE_URL_LANDING", "mode": "http-200", "component": "landing" },
+    { "urlEnv": "PROBE_URL_DASHBOARD", "mode": "http-200", "component": "dashboard" },
+    {
+      "urlEnv": "PROBE_URL_API_STATUS",
+      "mode": "api-status-json",
+      "components": { "api": "api", "agentExecution": "agent-execution" }
+    }
+  ]
+}

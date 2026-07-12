@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDayCells,
   buildStatusJson,
+  type ComponentDef,
   calculateUptime90d,
   type ParsedIncident,
   parseIssue,
@@ -10,9 +11,17 @@ import {
 
 const generatedAt = new Date('2026-07-12T00:00:00.000Z');
 
+const components: ComponentDef[] = [
+  { id: 'landing', label: 'Landing Page' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'api', label: 'API' },
+  { id: 'agent-execution', label: 'Agent Execution' },
+];
+const validIds = new Set(components.map((component) => component.id));
+
 function parsed(issues: (StatusIssue | null)[]): ParsedIncident[] {
   return issues
-    .map((item) => (item === null ? null : parseIssue(item)))
+    .map((item) => (item === null ? null : parseIssue(item, validIds)))
     .filter((item): item is ParsedIncident => item !== null);
 }
 
@@ -36,13 +45,14 @@ describe('status page pure logic', () => {
     expect(
       parseIssue(
         issue({ labels: ['component:api', 'component:agent-execution', 'severity:degraded'] }),
+        validIds,
       ),
     ).toMatchObject({
       components: ['api', 'agent-execution'],
       severity: 'degraded',
     });
     expect(
-      parseIssue(issue({ labels: ['severity:outage'] }), {
+      parseIssue(issue({ labels: ['severity:outage'] }), validIds, {
         warn: (message) => warnings.push(message),
       }),
     ).toBeNull();
@@ -108,9 +118,45 @@ describe('status page pure logic', () => {
         }),
       ],
       generatedAt,
+      components,
     );
     expect(status.globalStatus).toBe('outage');
     expect(status.incidents.map((incident) => incident.id)).toEqual([1]);
     expect(status.components.find((component) => component.id === 'api')?.cells).toHaveLength(90);
+  });
+
+  it('drives a completely different component set end to end', () => {
+    const custom: ComponentDef[] = [{ id: 'web', label: 'Web' }];
+    const customValidIds = new Set(custom.map((component) => component.id));
+
+    const webIncident = parseIssue(
+      issue({ id: 5, labels: ['component:web', 'severity:outage'] }),
+      customValidIds,
+    );
+    expect(webIncident?.components).toEqual(['web']);
+
+    const status = buildStatusJson(
+      [
+        issue({
+          id: 5,
+          labels: ['component:web', 'severity:outage'],
+          state: 'open',
+          openedAt: '2026-07-11T23:00:00.000Z',
+          closedAt: null,
+        }),
+      ],
+      generatedAt,
+      custom,
+    );
+    expect(status.components.map((component) => component.id)).toEqual(['web']);
+    expect(status.components.map((component) => component.label)).toEqual(['Web']);
+    expect(status.globalStatus).toBe('outage');
+    expect(status.incidents.map((incident) => incident.id)).toEqual([5]);
+
+    const ignored = parseIssue(
+      issue({ labels: ['component:api', 'severity:outage'] }),
+      customValidIds,
+    );
+    expect(ignored).toBeNull();
   });
 });
