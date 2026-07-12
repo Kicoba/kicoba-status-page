@@ -17,6 +17,7 @@ pick the right tool.
 | Model | GitHub Actions plus Issues plus Pages | GitHub Actions plus Issues plus Pages |
 | Frontend | Single static `index.html`, Tailwind via CDN, no build | Svelte and Sapper progressive web app with a build |
 | Footprint | One page you can read and audit in minutes | Full app with many generated files |
+| Design | Bespoke look, restyled by editing one HTML and Tailwind file | Its own default status-page theme, themeable |
 | Configuration | `monitor.config.json` plus repository secrets | `.upptimerc.yml` |
 | Components shown | Curated components you group and label yourself | One entry per monitored endpoint |
 | Uptime history | 90-day bar plus a precise uptime percentage per component | Response-time and uptime graphs (24h, 7d, 30d, yearly) |
