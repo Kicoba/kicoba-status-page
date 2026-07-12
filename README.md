@@ -11,6 +11,11 @@ Availability is checked automatically every five minutes.
 
 Live URL: https://status.kicoba.com
 
+## How it compares
+
+Already know Upptime or another status page? See
+[how this compares to Upptime](docs/comparison-with-upptime.md).
+
 ## Layout
 
 - `site/` static frontend served by GitHub Pages
