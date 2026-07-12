@@ -1,11 +1,15 @@
-export const componentIds = ['landing', 'dashboard', 'api', 'agent-execution'] as const;
-export type ComponentId = (typeof componentIds)[number];
+export type ComponentId = string;
 
 export const severities = ['degraded', 'outage'] as const;
 export type Severity = (typeof severities)[number];
 
 export type ComponentState = 'operational' | Severity;
 export type IssueState = 'open' | 'closed';
+
+export interface ComponentDef {
+  id: string;
+  label: string;
+}
 
 export interface StatusIssue {
   id: number;
@@ -48,13 +52,6 @@ export interface WarningSink {
   warn(message: string): void;
 }
 
-const labels: Record<ComponentId, string> = {
-  landing: 'Landing Page',
-  dashboard: 'Dashboard',
-  api: 'API',
-  'agent-execution': 'Agent Execution',
-};
-
 const severityRank: Record<ComponentState, number> = {
   operational: 0,
   degraded: 1,
@@ -66,14 +63,14 @@ interface Interval {
   endMs: number;
 }
 
-export function componentLabel(component: ComponentId): string {
-  return labels[component];
-}
-
-export function parseIssue(issue: StatusIssue, warningSink?: WarningSink): ParsedIncident | null {
+export function parseIssue(
+  issue: StatusIssue,
+  validIds: ReadonlySet<string>,
+  warningSink?: WarningSink,
+): ParsedIncident | null {
   const components = issue.labels
     .map((label) => label.match(/^component:(.+)$/)?.[1])
-    .filter((value): value is ComponentId => isComponentId(value));
+    .filter((value): value is string => value !== undefined && validIds.has(value));
   if (components.length === 0) {
     warningSink?.warn(`Ignoring issue #${issue.id}: no valid component label`);
     return null;
@@ -99,20 +96,22 @@ export function deriveGlobalStatus(incidents: readonly ParsedIncident[]): Compon
 export function buildStatusJson(
   issues: readonly StatusIssue[],
   generatedAt: Date,
+  components: readonly ComponentDef[],
   warningSink?: WarningSink,
 ): StatusJson {
+  const validIds = new Set(components.map((component) => component.id));
   const incidents = issues
-    .map((issue) => parseIssue(issue, warningSink))
+    .map((issue) => parseIssue(issue, validIds, warningSink))
     .filter((incident): incident is ParsedIncident => incident !== null);
   const generatedAtIso = generatedAt.toISOString();
   return {
     generatedAt: generatedAtIso,
     globalStatus: deriveGlobalStatus(incidents),
-    components: componentIds.map((component) => ({
-      id: component,
-      label: componentLabel(component),
-      uptime90d: calculateUptime90d(incidents, component, generatedAt),
-      cells: buildDayCells(incidents, component, generatedAt),
+    components: components.map((component) => ({
+      id: component.id,
+      label: component.label,
+      uptime90d: calculateUptime90d(incidents, component.id, generatedAt),
+      cells: buildDayCells(incidents, component.id, generatedAt),
     })),
     incidents: recentIncidents(incidents, generatedAt),
   };
@@ -230,10 +229,6 @@ function maxState(left: ComponentState, right: ComponentState): ComponentState {
 
 function isInterval(interval: Interval | null): interval is Interval {
   return interval !== null;
-}
-
-function isComponentId(value: string | undefined): value is ComponentId {
-  return componentIds.includes(value as ComponentId);
 }
 
 function isSeverity(value: string | undefined): value is Severity {

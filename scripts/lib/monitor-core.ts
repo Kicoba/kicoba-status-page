@@ -1,59 +1,56 @@
-import { type ComponentId, componentLabel, type Severity } from './status-core.js';
+import type { Severity } from './status-core.js';
 
 export type ProbeMode = 'http-200' | 'api-status-json';
 export type ProbeStatus = 'operational' | Severity;
 
-export interface MonitorTarget {
-  component: ComponentId;
-  urlEnv: string;
-  mode: ProbeMode;
-}
+export type MonitorTarget =
+  | { mode: 'http-200'; urlEnv: string; component: string }
+  | { mode: 'api-status-json'; urlEnv: string; components: Record<string, string> };
 
 export interface ProbeResult {
-  component: ComponentId;
+  component: string;
   status: ProbeStatus;
 }
 
 export interface OpenIncident {
   id: number;
-  components: readonly ComponentId[];
+  components: readonly string[];
 }
 
 export type MonitorAction =
   | {
       type: 'create';
-      component: ComponentId;
+      component: string;
       severity: Severity;
       title: string;
       body: string;
       labels: string[];
     }
-  | { type: 'close'; issueId: number; component: ComponentId; comment: string }
-  | { type: 'none'; component: ComponentId };
+  | { type: 'close'; issueId: number; component: string; comment: string }
+  | { type: 'none'; component: string };
 
-export interface ApiStatusPayload {
-  api: ProbeStatus;
-  agentExecution: ProbeStatus;
+export function apiStatusToProbeResults(
+  payload: Record<string, ProbeStatus>,
+  mapping: Record<string, string>,
+): ProbeResult[] {
+  return Object.entries(mapping).map(([payloadKey, componentId]) => ({
+    component: componentId,
+    status: payload[payloadKey] ?? 'outage',
+  }));
 }
 
-export function apiStatusToProbeResults(payload: ApiStatusPayload): ProbeResult[] {
-  return [
-    { component: 'api', status: payload.api },
-    { component: 'agent-execution', status: payload.agentExecution },
-  ];
-}
-
-export function unreachableApiStatus(): ProbeResult[] {
-  return [
-    { component: 'api', status: 'outage' },
-    { component: 'agent-execution', status: 'outage' },
-  ];
+export function unreachableApiStatus(mapping: Record<string, string>): ProbeResult[] {
+  return Object.values(mapping).map((componentId) => ({
+    component: componentId,
+    status: 'outage',
+  }));
 }
 
 export function planMonitorActions(
   results: readonly ProbeResult[],
   openIncidents: readonly OpenIncident[],
   now: Date,
+  labelOf: (id: string) => string,
 ): MonitorAction[] {
   return results.map((result) => {
     const existing = openIncidents.find((incident) =>
@@ -73,7 +70,7 @@ export function planMonitorActions(
     if (existing) {
       return { type: 'none', component: result.component };
     }
-    const label = componentLabel(result.component);
+    const label = labelOf(result.component);
     return {
       type: 'create',
       component: result.component,
