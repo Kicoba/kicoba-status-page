@@ -44,3 +44,14 @@ Kicoba.com <agentic-workspace@kicoba.com>
 ```
 
 The local pre-commit hook refuses any other commit email.
+
+## License
+
+Licensed under the European Union Public Licence v1.2 (EUPL-1.2). See
+[`LICENSE`](LICENSE). Copyright Kicoba, https://kicoba.com.
+
+You are welcome to reuse and adapt this status page for your own services, mostly
+through `monitor.config.json` and the repository secrets. If you do, please keep
+the link to https://kicoba.com in the page footer. It is a courtesy that supports
+the project, not a legal obligation under the EUPL.
+
