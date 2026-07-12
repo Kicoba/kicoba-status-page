@@ -1,0 +1,51 @@
+name: status
+
+on:
+  issues:
+    types: [opened, edited, closed, deleted, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  issues: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Verified on 2026-07-12, latest stable: v7.0.0
+      - uses: actions/checkout@v7.0.0
+      # Verified on 2026-07-12, latest stable: v6.4.0
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npx tsx scripts/generate-status.ts --output=site/status.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # Verified on 2026-07-12, latest stable: v6.0.0
+      - uses: actions/configure-pages@v6.0.0
+      # Verified on 2026-07-12, latest stable: v5.0.0
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Verified on 2026-07-12, latest stable: v5.0.0
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.0
