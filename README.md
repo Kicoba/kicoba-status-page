@@ -77,7 +77,9 @@ The local pre-commit hook refuses any other commit email.
 ## License
 
 Licensed under the European Union Public Licence v1.2 (EUPL-1.2). See
-[`LICENSE`](LICENSE). Copyright Kicoba, https://kicoba.com.
+[`LICENSE`](LICENSE). Copyright Kicoba, https://kicoba.com. For why a European
+licence over US-origin ones like MIT or Apache, see
+[docs/why-eupl.md](docs/why-eupl.md).
 
 You are welcome to reuse and adapt this status page for your own services, mostly
 through `monitor.config.json` and the repository secrets. If you do, please keep

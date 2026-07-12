@@ -39,3 +39,5 @@ pick the right tool.
 - You want to present a curated set of grouped surfaces under your own labels, rather than one line per raw endpoint.
 - You want to adapt it mostly through one config file and repository secrets.
 - A European public licence (EUPL-1.2) fits your context.
+
+On why the licence choice matters, see [Why the European Union Public Licence](why-eupl.md).
