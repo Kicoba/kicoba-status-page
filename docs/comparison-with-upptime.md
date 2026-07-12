@@ -18,7 +18,7 @@ pick the right tool.
 | Frontend | Single static `index.html`, Tailwind via CDN, no build | Svelte and Sapper progressive web app with a build |
 | Footprint | One page you can read and audit in minutes | Full app with many generated files |
 | Configuration | `monitor.config.json` plus repository secrets | `.upptimerc.yml` |
-| Components shown | Curated functional labels, internal topology stays private | One entry per monitored endpoint |
+| Components shown | Curated components you group and label yourself | One entry per monitored endpoint |
 | Uptime history | 90-day bar plus a precise uptime percentage per component | Response-time and uptime graphs (24h, 7d, 30d, yearly) |
 | Response-time graphs | Not yet | Yes |
 | Notifications | Not yet, incidents are tracked as issues | Slack and other channels |
@@ -35,13 +35,6 @@ pick the right tool.
 ## Choose this project if
 
 - You want the smallest possible surface: one static page you can read, audit, and adapt in a single sitting, with no framework build.
-- You want to show a curated set of functional surfaces (for example Landing Page, Dashboard, API) rather than exposing every raw endpoint, keeping your internal topology private.
+- You want to present a curated set of grouped surfaces under your own labels, rather than one line per raw endpoint.
 - You want to adapt it mostly through one config file and repository secrets.
 - A European public licence (EUPL-1.2) fits your context.
-
-## Credit
-
-Upptime pioneered the GitHub-native status page and remains an excellent choice. This
-project takes the same core idea in a deliberately minimal direction. If you reuse or
-adapt this page, please keep the link to https://kicoba.com in the footer, as a
-courtesy that supports the project.
