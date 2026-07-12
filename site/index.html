@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kicoba Status</title>
+  <meta name="description" content="Current operational status of Kicoba services." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            encre: '#0D1B2A',
+            n0: '#FFFFFF', n50: '#F7F8FA', n100: '#EEF1F4', n200: '#DDE2E8',
+            n300: '#C2CAD3', n500: '#6B7785', n700: '#3B4554', n900: '#141A22',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --op-fg: #27568C; --op-bg: #E5EDF5; --op-bar: #6FA1DD;
+      --dg-fg: #B8651A; --dg-bg: #FBEFE0; --dg-bar: #FFCC00; --dg-text: #8A6A00; --dg-chip: rgba(255,204,0,0.20);
+      --ou-fg: #B23A3A; --ou-bg: #FBE8E8;
+      --shadow-1: 0 1px 2px rgba(13, 27, 42, 0.06);
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body { font-feature-settings: "tnum"; }
+    a { color: var(--op-fg); }
+    .link { color: #2C5282; text-decoration: none; font-weight: 500; }
+    .link:hover { text-decoration: underline; }
+    .link:focus-visible, a:focus-visible, [tabindex]:focus-visible, button:focus-visible {
+      outline: 2px solid #0D1B2A; outline-offset: 2px; border-radius: 2px;
+    }
+    /* 90-day bar */
+    .bar { display: flex; gap: 2px; width: 100%; }
+    .day {
+      flex: 1 1 0; min-width: 0; height: 34px; border-radius: 2px;
+      background: var(--op-bar); cursor: default;
+    }
+    .day[data-sev="degraded"] { background: var(--dg-bar); }
+    .day[data-sev="outage"] { background: var(--ou-fg); }
+    .day:hover, .day[data-active="true"] { outline: 2px solid rgba(13,27,42,0.35); outline-offset: 1px; }
+    .day:focus-visible { outline: 2px solid #0D1B2A; outline-offset: 1px; }
+    @media (max-width: 600px) { .day { height: 40px; } }
+    /* tooltip */
+    #tip {
+      position: fixed; z-index: 50; max-width: 300px; pointer-events: none;
+      background: #0D1B2A; color: #fff; border-radius: 6px; padding: 12px 14px;
+      box-shadow: 0 4px 12px rgba(13,27,42,0.28); font-size: 13px; line-height: 1.5;
+      opacity: 0; transform: translateY(4px); transition: opacity 120ms ease-out, transform 120ms ease-out;
+    }
+    #tip.show { opacity: 1; transform: translateY(0); }
+    #tip a { color: #fff; pointer-events: auto; text-decoration: underline; }
+    #tip .tip-inc { display: block; margin-top: 6px; }
+    .skel { background: #EEF1F4; border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @media (prefers-reduced-motion: reduce) {
+      #tip { transition: none; } .skel { animation: none; }
+    }
+  </style>
+</head>
+<body class="bg-n50 text-n900 font-sans antialiased">
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow">Skip to content</a>
+
+  <div class="mx-auto w-full max-w-3xl px-5 sm:px-6 py-8 sm:py-12">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between gap-4 mb-8">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-encre text-n0 font-semibold text-lg">K</span>
+        <div class="leading-tight">
+          <div class="text-encre font-semibold text-lg">Kicoba</div>
+          <div class="text-n500 text-sm">Status</div>
+        </div>
+      </div>
+      <!-- Reserved for a subscribe control (out of v1) -->
+      <div id="header-actions" aria-hidden="true"></div>
+    </header>
+
+    <main id="main">
+      <!-- Global banner -->
+      <section id="banner" aria-live="polite" class="rounded-lg px-5 sm:px-6 py-5 mb-6" style="background: var(--op-fg);">
+        <div class="flex items-center gap-3">
+          <span id="banner-icon" aria-hidden="true" class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style="background: rgba(255,255,255,0.25);"></span>
+          <h1 id="banner-title" class="font-semibold text-xl sm:text-2xl" style="color: var(--banner-fg, #fff);">Loading status</h1>
+        </div>
+        <p class="mt-2 text-sm" style="color: var(--banner-fg, #fff); opacity: 0.85;">
+          Uptime over the past 90 days. <a href="#components" class="underline underline-offset-2" style="color: var(--banner-fg, #fff);">View historical uptime</a>
+        </p>
+      </section>
+
+      <!-- Legend -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 text-sm text-n700" aria-hidden="false">
+        <span class="font-medium text-n500">Legend</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background: var(--op-bar);"></span>Operational</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background: var(--dg-bar);"></span>Degraded</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background: var(--ou-fg);"></span>Outage</span>
+      </div>
+
+      <!-- Components -->
+      <section id="components" aria-label="Component status" class="rounded-lg border border-n200 bg-n0 divide-y divide-n200" style="box-shadow: var(--shadow-1);">
+        <!-- rows injected here -->
+      </section>
+
+      <!-- Error state (hidden by default) -->
+      <section id="error" hidden class="rounded-lg border border-n200 bg-n0 p-6 text-center" style="box-shadow: var(--shadow-1);">
+        <p class="text-n700 font-medium">Status data is temporarily unavailable.</p>
+        <p class="text-n500 text-sm mt-1">The status feed could not be loaded. This does not necessarily mean a service is down.</p>
+        <button id="reload" class="mt-4 inline-flex items-center rounded-md border border-n300 bg-n0 px-4 py-2 text-sm font-medium text-n900 hover:bg-n100">Reload</button>
+      </section>
+
+      <!-- Incident history -->
+      <section aria-label="Incident history" class="mt-10">
+        <h2 class="text-lg font-semibold text-n900 mb-4">Incident History</h2>
+        <div id="incidents" class="space-y-4">
+          <!-- incidents injected here -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 pt-6 border-t border-n200 flex flex-wrap items-center justify-end gap-3 text-sm text-n500">
+      <span>Open-source status page by <a class="link" href="https://kicoba.com" title="Agentic workspace to manage your AI agents by team and objective">Kicoba.com</a></span>
+      <a class="link inline-flex items-center" href="https://github.com/Kicoba/kicoba-status-page" rel="noopener" title="View the source on GitHub" aria-label="View this status page on GitHub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.523 2 12 2Z"/></svg>
+      </a>
+    </footer>
+  </div>
+
+  <div id="tip" role="tooltip" aria-hidden="true"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var DAYS = 90;
+    var SEV_RANK = { operational: 0, degraded: 1, outage: 2 };
+    var SEV_LABEL = { operational: 'Operational', degraded: 'Degraded', outage: 'Outage' };
+    var DAY_MS = 24 * 60 * 60 * 1000;
+
+    var els = {
+      banner: document.getElementById('banner'),
+      bannerTitle: document.getElementById('banner-title'),
+      bannerIcon: document.getElementById('banner-icon'),
+      components: document.getElementById('components'),
+      incidents: document.getElementById('incidents'),
+      error: document.getElementById('error'),
+      tip: document.getElementById('tip'),
+    };
+
+    var CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    var WARN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
+
+    function midnight(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function fmtDate(d) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function fmtTime(iso) {
+      var d = new Date(iso);
+      return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtDuration(ms) {
+      if (ms <= 0) return '0m';
+      var mins = Math.round(ms / 60000);
+      var h = Math.floor(mins / 60), m = mins % 60;
+      if (h >= 24) { var days = Math.floor(h / 24); return days + 'd ' + (h % 24) + 'h'; }
+      if (h > 0) return h + 'h ' + m + 'm';
+      return m + 'm';
+    }
+    function maxSev(a, b) { return SEV_RANK[b] > SEV_RANK[a] ? b : a; }
+
+    // Build a 90-day severity array for one component id, plus per-day incident lists.
+    function buildComponentDays(compId, incidents, now) {
+      var today0 = midnight(now).getTime();
+      var startDay0 = today0 - (DAYS - 1) * DAY_MS;
+      var days = [];
+      for (var i = 0; i < DAYS; i++) {
+        days.push({ date: new Date(startDay0 + i * DAY_MS), sev: 'operational', incidents: [], downMs: 0 });
+      }
+      incidents.forEach(function (inc) {
+        if (!inc.components || inc.components.indexOf(compId) === -1) return;
+        var open = new Date(inc.openedAt).getTime();
+        var close = inc.closedAt ? new Date(inc.closedAt).getTime() : now.getTime();
+        if (close <= startDay0) return;
+        for (var i = 0; i < DAYS; i++) {
+          var dStart = startDay0 + i * DAY_MS;
+          var dEnd = dStart + DAY_MS;
+          var overlap = Math.min(close, dEnd) - Math.max(open, dStart);
+          if (overlap > 0) {
+            days[i].sev = maxSev(days[i].sev, inc.severity);
+            days[i].incidents.push(inc);
+            if (inc.severity === 'outage') days[i].downMs += overlap;
+          }
+        }
+      });
+      return days;
+    }
+
+    function componentRow(comp, incidents, now) {
+      var days = buildComponentDays(comp.id, incidents, now);
+      var current = 'operational';
+      incidents.forEach(function (inc) {
+        if (inc.state === 'open' && inc.components && inc.components.indexOf(comp.id) !== -1) {
+          current = maxSev(current, inc.severity);
+        }
+      });
+      var sevVar = current === 'outage' ? 'var(--ou-fg)' : current === 'degraded' ? 'var(--dg-text)' : 'var(--op-fg)';
+      var dotColor = current === 'degraded' ? 'var(--dg-bar)' : sevVar;
+
+      var row = document.createElement('div');
+      row.className = 'px-5 sm:px-6 py-5';
+
+      var head = document.createElement('div');
+      head.className = 'flex items-center justify-between gap-3 mb-3';
+      head.innerHTML =
+        '<span class="font-medium text-n900">' + esc(comp.label) + '</span>' +
+        '<span class="inline-flex items-center gap-2 text-sm font-medium" style="color:' + sevVar + '">' +
+          '<span class="inline-block h-2 w-2 rounded-full" style="background:' + dotColor + '"></span>' +
+          SEV_LABEL[current] + '</span>';
+      row.appendChild(head);
+
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.setAttribute('role', 'img');
+      var upLabel = (typeof comp.uptime90d === 'number') ? comp.uptime90d.toFixed(2) + ' % uptime over 90 days' : '';
+      bar.setAttribute('aria-label', comp.label + ': ' + upLabel);
+      days.forEach(function (d) {
+        var seg = document.createElement('div');
+        seg.className = 'day';
+        seg.setAttribute('data-sev', d.sev);
+        seg.setAttribute('tabindex', '0');
+        seg.setAttribute('role', 'button');
+        var aria = fmtDate(d.date) + ': ' + SEV_LABEL[d.sev];
+        if (d.sev === 'outage') aria += ', ' + fmtDuration(d.downMs) + ' of downtime';
+        seg.setAttribute('aria-label', aria);
+        seg.__day = d;
+        bar.appendChild(seg);
+      });
+      row.appendChild(bar);
+
+      var foot = document.createElement('div');
+      foot.className = 'flex items-center justify-between gap-3 mt-2 text-xs text-n500';
+      var pct = (typeof comp.uptime90d === 'number') ? comp.uptime90d.toFixed(2) + ' % uptime' : 'uptime unavailable';
+      foot.innerHTML =
+        '<span>90 days ago</span>' +
+        '<span class="font-mono text-n700">' + pct + '</span>' +
+        '<span>Today</span>';
+      row.appendChild(foot);
+
+      return row;
+    }
+
+    // ---- Tooltip ----
+    var activeSeg = null;
+    function showTip(seg) {
+      var d = seg.__day;
+      if (!d) return;
+      var html = '<div class="font-medium">' + esc(fmtDate(d.date)) + '</div>' +
+                 '<div style="color:#C2CAD3">' + SEV_LABEL[d.sev] + '</div>';
+      if (d.downMs > 0) html += '<div style="color:#C2CAD3">Downtime: ' + esc(fmtDuration(d.downMs)) + '</div>';
+      if (d.incidents.length) {
+        var seen = {};
+        d.incidents.forEach(function (inc) {
+          if (seen[inc.id]) return; seen[inc.id] = 1;
+          html += '<a class="tip-inc" href="' + esc(inc.url) + '">' + esc(inc.title) + '</a>';
+        });
+      }
+      els.tip.innerHTML = html;
+      els.tip.setAttribute('aria-hidden', 'false');
+      var r = seg.getBoundingClientRect();
+      els.tip.classList.add('show');
+      var tr = els.tip.getBoundingClientRect();
+      var left = r.left + r.width / 2 - tr.width / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+      var top = r.top - tr.height - 8;
+      if (top < 8) top = r.bottom + 8;
+      els.tip.style.left = left + 'px';
+      els.tip.style.top = top + 'px';
+      if (activeSeg) activeSeg.removeAttribute('data-active');
+      activeSeg = seg; seg.setAttribute('data-active', 'true');
+    }
+    function hideTip() {
+      els.tip.classList.remove('show');
+      els.tip.setAttribute('aria-hidden', 'true');
+      if (activeSeg) { activeSeg.removeAttribute('data-active'); activeSeg = null; }
+    }
+    document.addEventListener('mouseover', function (e) {
+      var seg = e.target.closest && e.target.closest('.day');
+      if (seg) showTip(seg);
+    });
+    document.addEventListener('mouseout', function (e) {
+      var seg = e.target.closest && e.target.closest('.day');
+      if (seg && !els.tip.contains(e.relatedTarget)) hideTip();
+    });
+    document.addEventListener('focusin', function (e) {
+      var seg = e.target.closest && e.target.closest('.day');
+      if (seg) showTip(seg); else if (!els.tip.contains(e.target)) hideTip();
+    });
+    document.addEventListener('click', function (e) {
+      var seg = e.target.closest && e.target.closest('.day');
+      if (seg) { e.preventDefault(); if (activeSeg === seg) hideTip(); else showTip(seg); }
+      else if (!els.tip.contains(e.target)) hideTip();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideTip(); });
+    window.addEventListener('scroll', hideTip, true);
+    window.addEventListener('resize', hideTip);
+
+    // ---- Banner ----
+    function renderBanner(sev) {
+      var map = {
+        operational: { bg: 'var(--op-fg)', fg: '#fff', chip: 'rgba(255,255,255,0.25)', title: 'All Systems Operational', icon: CHECK },
+        degraded: { bg: 'var(--dg-bar)', fg: '#0D1B2A', chip: 'rgba(13,27,42,0.18)', title: 'Degraded performance on one or more services', icon: WARN },
+        outage: { bg: 'var(--ou-fg)', fg: '#fff', chip: 'rgba(255,255,255,0.25)', title: 'Service outage in progress', icon: WARN },
+      };
+      var m = map[sev];
+      els.banner.style.background = m.bg;
+      els.banner.style.setProperty('--banner-fg', m.fg);
+      els.bannerIcon.style.background = m.chip;
+      els.bannerIcon.style.color = m.fg;
+      els.bannerTitle.textContent = m.title;
+      els.bannerIcon.innerHTML = m.icon;
+    }
+
+    // ---- Incident history (last 7 days) ----
+    function renderIncidents(incidents, now) {
+      var cutoff = now.getTime() - 7 * DAY_MS;
+      var recent = incidents.filter(function (inc) {
+        var close = inc.closedAt ? new Date(inc.closedAt).getTime() : now.getTime();
+        return close >= cutoff;
+      }).sort(function (a, b) { return new Date(b.openedAt) - new Date(a.openedAt); });
+
+      els.incidents.innerHTML = '';
+      if (!recent.length) {
+        var empty = document.createElement('p');
+        empty.className = 'text-n500 text-sm';
+        empty.textContent = 'No incidents in the past 7 days.';
+        els.incidents.appendChild(empty);
+        return;
+      }
+      recent.forEach(function (inc) {
+        var open = inc.state === 'open';
+        var sevVar = inc.severity === 'outage' ? 'var(--ou-fg)' : inc.severity === 'degraded' ? 'var(--dg-fg)' : 'var(--op-fg)';
+        var sevBg = inc.severity === 'outage' ? 'var(--ou-bg)' : inc.severity === 'degraded' ? 'var(--dg-bg)' : 'var(--op-bg)';
+        var isDeg = inc.severity === 'degraded';
+        var badgeFg = isDeg ? 'var(--dg-text)' : sevVar;
+        var badgeBg = isDeg ? 'var(--dg-chip)' : sevBg;
+        var comps = (inc.components || []).map(function (c) { return compLabel(c); });
+
+        var card = document.createElement('article');
+        card.className = 'rounded-lg border border-n200 bg-n0 p-5';
+        card.style.boxShadow = 'var(--shadow-1)';
+
+        var chips = comps.map(function (l) {
+          return '<span class="inline-flex items-center rounded-sm bg-n100 px-2 py-0.5 text-xs text-n700">' + esc(l) + '</span>';
+        }).join('');
+
+        var stateBadge = open
+          ? '<span class="inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-xs font-medium" style="color:var(--dg-text);background:var(--dg-chip)"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--dg-text)"></span>Ongoing</span>'
+          : '<span class="inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-xs font-medium" style="color:var(--op-fg);background:var(--op-bg)"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--op-fg)"></span>Resolved</span>';
+
+        card.innerHTML =
+          '<div class="flex items-start justify-between gap-3">' +
+            '<h3 class="font-medium text-n900">' + esc(inc.title) + '</h3>' +
+            stateBadge +
+          '</div>' +
+          '<div class="mt-2 flex flex-wrap items-center gap-2">' +
+            '<span class="inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-xs font-medium" style="color:' + badgeFg + ';background:' + badgeBg + '"><span class="h-1.5 w-1.5 rounded-full" style="background:' + badgeFg + '"></span>' + esc(SEV_LABEL[inc.severity]) + '</span>' +
+            chips +
+          '</div>' +
+          (inc.body ? '<p class="mt-3 text-sm text-n700">' + esc(inc.body) + '</p>' : '') +
+          '<dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-n500">' +
+            '<div><dt class="inline">Opened </dt><dd class="inline font-mono text-n700">' + esc(fmtTime(inc.openedAt)) + '</dd></div>' +
+            (inc.closedAt ? '<div><dt class="inline">Resolved </dt><dd class="inline font-mono text-n700">' + esc(fmtTime(inc.closedAt)) + '</dd></div>' : '') +
+          '</dl>' +
+          (inc.url ? '<a class="link mt-3 inline-block text-sm" href="' + esc(inc.url) + '">View incident issue</a>' : '');
+
+        els.incidents.appendChild(card);
+      });
+    }
+
+    var COMP_LABELS = {};
+    function compLabel(id) { return COMP_LABELS[id] || id; }
+
+    function render(data) {
+      var now = data.generatedAt ? new Date(data.generatedAt) : new Date();
+      var components = data.components || [];
+      var incidents = data.incidents || [];
+      components.forEach(function (c) { COMP_LABELS[c.id] = c.label; });
+
+      // Global severity from OPEN incidents.
+      var globalSev = 'operational';
+      incidents.forEach(function (inc) { if (inc.state === 'open') globalSev = maxSev(globalSev, inc.severity); });
+      renderBanner(globalSev);
+
+      els.components.innerHTML = '';
+      components.forEach(function (c) { els.components.appendChild(componentRow(c, incidents, now)); });
+
+      renderIncidents(incidents, now);
+      els.error.hidden = true;
+      els.components.hidden = false;
+    }
+
+    function renderSkeleton() {
+      var html = '';
+      for (var i = 0; i < 4; i++) {
+        html += '<div class="px-5 sm:px-6 py-5">' +
+          '<div class="flex items-center justify-between mb-3"><span class="skel inline-block h-4 w-32"></span><span class="skel inline-block h-4 w-20"></span></div>' +
+          '<div class="skel h-[34px] w-full"></div>' +
+          '<div class="flex items-center justify-between mt-2"><span class="skel inline-block h-3 w-16"></span><span class="skel inline-block h-3 w-24"></span><span class="skel inline-block h-3 w-10"></span></div>' +
+          '</div>';
+      }
+      els.components.innerHTML = html;
+    }
+
+    function showError() {
+      els.components.hidden = true;
+      els.error.hidden = false;
+      els.bannerTitle.textContent = 'Status unavailable';
+      els.banner.style.background = '#0D1B2A';
+      els.banner.style.setProperty('--banner-fg', '#fff');
+      els.bannerIcon.style.background = 'transparent';
+      els.bannerIcon.innerHTML = '';
+      els.incidents.innerHTML = '';
+    }
+
+    function load() {
+      els.error.hidden = true;
+      els.components.hidden = false;
+      renderSkeleton();
+      fetch('status.json', { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (data) {
+          if (!data || !Array.isArray(data.components)) throw new Error('malformed');
+          render(data);
+        })
+        .catch(function () { showError(); });
+    }
+
+    document.getElementById('reload').addEventListener('click', load);
+    load();
+  })();
+  </script>
+</body>
+</html>
