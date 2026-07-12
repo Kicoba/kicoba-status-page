@@ -1,0 +1,5 @@
+[
+  { "component": "landing",   "urlEnv": "PROBE_URL_LANDING",    "mode": "http-200" },
+  { "component": "dashboard", "urlEnv": "PROBE_URL_DASHBOARD",  "mode": "http-200" },
+  { "component": "api",       "urlEnv": "PROBE_URL_API_STATUS", "mode": "api-status-json" }
+]

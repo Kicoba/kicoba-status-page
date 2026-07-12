@@ -1,0 +1,11 @@
+{
+  "name": "kicoba-status-page",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Public status page for Kicoba services.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24"
+  }
+}
