@@ -2,21 +2,21 @@
 
 Public status page for Kicoba services.
 
-It shows the current health of Kicoba public-facing surfaces (Landing Page,
-Dashboard, API, Agent Execution), a 90-day uptime history for each surface, and
+It shows the current health of Kicoba public-facing surfaces: Landing Page,
+Dashboard, API and Agent Execution. It also keeps a 90-day uptime history and
 recent incidents.
 
-The site is static and served by GitHub Pages, so it stays up even during an
-outage. Availability is checked automatically at a fixed interval.
+The site is static and served by GitHub Pages, so it stays up during an outage.
+Availability is checked automatically every five minutes.
 
-Live URL: to be configured.
+Live URL: https://status.kicoba.com
 
 ## Layout
 
 - `site/` static frontend served by GitHub Pages
 - `scripts/` generation and monitoring scripts
-- `.github/workflows/` build, deploy and monitoring workflows
-- `monitor.config.json` probe configuration, references environment variables only, never real URLs
+- `.github/workflows/` deployment and monitoring workflows
+- `monitor.config.json` probe configuration with environment variable references only
 
 ## Configuration
 
@@ -26,3 +26,21 @@ environment at runtime. They are never committed:
 - `PROBE_URL_LANDING`
 - `PROBE_URL_DASHBOARD`
 - `PROBE_URL_API_STATUS`
+
+## Local setup
+
+Run:
+
+```sh
+./scripts/setup.sh
+npm ci
+npm run build
+```
+
+The setup script configures the public repo commit identity:
+
+```text
+Kicoba.com <agentic-workspace@kicoba.com>
+```
+
+The local pre-commit hook refuses any other commit email.

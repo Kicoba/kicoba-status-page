@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+email="$(git config user.email || true)"
+if [ "$email" != "agentic-workspace@kicoba.com" ]; then
+  echo "Commit blocked: this public repo must use Kicoba.com <agentic-workspace@kicoba.com>." >&2
+  exit 1
+fi
+
+if git grep -n $'—' -- '*.md'; then
+  echo "Commit blocked: Markdown must not contain em dashes." >&2
+  exit 1
+fi
+
+if git grep -n ';' -- '*.md'; then
+  echo "Commit blocked: Markdown must not contain semicolons." >&2
+  exit 1
+fi
