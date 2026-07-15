@@ -22,7 +22,7 @@ describe('monitor config loading', () => {
       components: [{ id: 'web', label: 'Web' }],
       probes: [{ mode: 'http-200', urlEnv: 'PROBE_URL_WEB', component: 'web' }],
     };
-    expect(parseConfig(config)).toEqual(config);
+    expect(parseConfig(config)).toEqual({ ...config, privateProbes: [] });
   });
 
   it('accepts an api-status-json probe with an arbitrary key mapping', () => {
@@ -43,6 +43,42 @@ describe('monitor config loading', () => {
       mode: 'api-status-json',
       components: { apiStatus: 'api', workerStatus: 'worker' },
     });
+  });
+
+  it('accepts private alpha HTTP status probes', () => {
+    expect(
+      parseConfig({
+        components: [{ id: 'web', label: 'Web' }],
+        probes: [{ mode: 'http-200', urlEnv: 'PROBE_URL_WEB', component: 'web' }],
+        privateProbes: [
+          {
+            id: 'app-login',
+            mode: 'http-status',
+            urlEnv: 'PROBE_URL_PRIVATE_APP_LOGIN',
+            expectedStatus: 200,
+          },
+        ],
+      }).privateProbes,
+    ).toEqual([
+      {
+        id: 'app-login',
+        mode: 'http-status',
+        urlEnv: 'PROBE_URL_PRIVATE_APP_LOGIN',
+        expectedStatus: 200,
+      },
+    ]);
+  });
+
+  it('rejects invalid private alpha HTTP status probes', () => {
+    expect(() =>
+      parseConfig({
+        components: [{ id: 'web', label: 'Web' }],
+        probes: [],
+        privateProbes: [
+          { id: 'bad', mode: 'http-status', urlEnv: 'PROBE_URL_PRIVATE_BAD', expectedStatus: 99 },
+        ],
+      }),
+    ).toThrow(/must be an HTTP status code/);
   });
 
   it('rejects an http-200 probe that references an unknown component', () => {

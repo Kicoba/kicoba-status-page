@@ -30,5 +30,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PROBE_URL_LANDING: ${{ secrets.PROBE_URL_LANDING }}
-          PROBE_URL_DASHBOARD: ${{ secrets.PROBE_URL_DASHBOARD }}
+          PROBE_URL_APP: ${{ secrets.PROBE_URL_APP }}
+          PROBE_URL_DATAROOM: ${{ secrets.PROBE_URL_DATAROOM }}
           PROBE_URL_API_STATUS: ${{ secrets.PROBE_URL_API_STATUS }}
+
+      - run: npx tsx scripts/private-monitor.ts
+        env:
+          PROBE_URL_PRIVATE_APP_LOGIN: ${{ secrets.PROBE_URL_PRIVATE_APP_LOGIN }}
+          PROBE_URL_PRIVATE_WAITLIST: ${{ secrets.PROBE_URL_PRIVATE_WAITLIST }}
+          PROBE_URL_PRIVATE_DATAROOM_AUTH_GATE: ${{ secrets.PROBE_URL_PRIVATE_DATAROOM_AUTH_GATE }}
+          PROBE_URL_PRIVATE_AUTOMATION_CANARY: ${{ secrets.PROBE_URL_PRIVATE_AUTOMATION_CANARY }}

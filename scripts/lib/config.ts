@@ -4,12 +4,21 @@ import type { ComponentDef } from './status-core.js';
 
 export type ProbeConfig = MonitorTarget;
 
+export interface PrivateProbeConfig {
+  id: string;
+  urlEnv: string;
+  mode: 'http-status';
+  expectedStatus: number;
+}
+
 export interface MonitorConfig {
   components: ComponentDef[];
   probes: ProbeConfig[];
+  privateProbes: PrivateProbeConfig[];
 }
 
 const probeModes = ['http-200', 'api-status-json'] as const;
+const privateProbeModes = ['http-status'] as const;
 
 export async function loadConfig(path = 'monitor.config.json'): Promise<MonitorConfig> {
   const raw = await readFile(path, 'utf8');
@@ -27,7 +36,10 @@ export function parseConfig(value: unknown, source = 'config'): MonitorConfig {
   const probes = asArray(root.probes, `${source}.probes`).map((probe, index) =>
     parseProbe(probe, validIds, `${source}.probes[${index}]`),
   );
-  return { components, probes };
+  const privateProbes = asOptionalArray(root.privateProbes, `${source}.privateProbes`).map(
+    (probe, index) => parsePrivateProbe(probe, `${source}.privateProbes[${index}]`),
+  );
+  return { components, probes, privateProbes };
 }
 
 function parseComponents(value: unknown, source: string): ComponentDef[] {
@@ -71,6 +83,20 @@ function parseProbe(value: unknown, validIds: ReadonlySet<string>, source: strin
   throw new Error(`${source}.mode "${mode}" is not one of ${probeModes.join(', ')}`);
 }
 
+function parsePrivateProbe(value: unknown, source: string): PrivateProbeConfig {
+  const record = asObject(value, source);
+  const mode = asNonEmptyString(record.mode, `${source}.mode`);
+  if (mode !== 'http-status') {
+    throw new Error(`${source}.mode "${mode}" is not one of ${privateProbeModes.join(', ')}`);
+  }
+  return {
+    id: asNonEmptyString(record.id, `${source}.id`),
+    urlEnv: asNonEmptyString(record.urlEnv, `${source}.urlEnv`),
+    mode,
+    expectedStatus: asHttpStatus(record.expectedStatus, `${source}.expectedStatus`),
+  };
+}
+
 function parseMapping(
   value: unknown,
   validIds: ReadonlySet<string>,
@@ -103,6 +129,13 @@ function asObject(value: unknown, source: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function asOptionalArray(value: unknown, source: string): unknown[] {
+  if (value === undefined) {
+    return [];
+  }
+  return asArray(value, source);
+}
+
 function asArray(value: unknown, source: string): unknown[] {
   if (!Array.isArray(value)) {
     throw new Error(`${source} must be an array`);
@@ -113,6 +146,13 @@ function asArray(value: unknown, source: string): unknown[] {
 function asNonEmptyString(value: unknown, source: string): string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`${source} must be a non-empty string`);
+  }
+  return value;
+}
+
+function asHttpStatus(value: unknown, source: string): number {
+  if (!Number.isInteger(value) || typeof value !== 'number' || value < 100 || value > 599) {
+    throw new Error(`${source} must be an HTTP status code`);
   }
   return value;
 }
