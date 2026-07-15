@@ -1,17 +1,75 @@
 {
   "components": [
-    { "id": "landing", "label": "Landing Page" },
-    { "id": "dashboard", "label": "Dashboard" },
-    { "id": "api", "label": "API" },
-    { "id": "agent-execution", "label": "Agent Execution" }
+    {
+      "id": "landing",
+      "label": "Landing Page"
+    },
+    {
+      "id": "app",
+      "label": "App"
+    },
+    {
+      "id": "api",
+      "label": "API"
+    },
+    {
+      "id": "data-room",
+      "label": "Data Room"
+    },
+    {
+      "id": "agent-execution",
+      "label": "Agent Execution"
+    }
   ],
   "probes": [
-    { "urlEnv": "PROBE_URL_LANDING", "mode": "http-200", "component": "landing" },
-    { "urlEnv": "PROBE_URL_DASHBOARD", "mode": "http-200", "component": "dashboard" },
+    {
+      "urlEnv": "PROBE_URL_LANDING",
+      "mode": "http-200",
+      "component": "landing"
+    },
+    {
+      "urlEnv": "PROBE_URL_APP",
+      "mode": "http-200",
+      "component": "app"
+    },
+    {
+      "urlEnv": "PROBE_URL_DATAROOM",
+      "mode": "http-200",
+      "component": "data-room"
+    },
     {
       "urlEnv": "PROBE_URL_API_STATUS",
       "mode": "api-status-json",
-      "components": { "api": "api", "agentExecution": "agent-execution" }
+      "components": {
+        "api": "api",
+        "agentExecution": "agent-execution"
+      }
+    }
+  ],
+  "privateProbes": [
+    {
+      "id": "app-login",
+      "urlEnv": "PROBE_URL_PRIVATE_APP_LOGIN",
+      "mode": "http-status",
+      "expectedStatus": 200
+    },
+    {
+      "id": "waitlist-submit",
+      "urlEnv": "PROBE_URL_PRIVATE_WAITLIST",
+      "mode": "http-status",
+      "expectedStatus": 200
+    },
+    {
+      "id": "data-room-auth-gate",
+      "urlEnv": "PROBE_URL_PRIVATE_DATAROOM_AUTH_GATE",
+      "mode": "http-status",
+      "expectedStatus": 200
+    },
+    {
+      "id": "automation-canary",
+      "urlEnv": "PROBE_URL_PRIVATE_AUTOMATION_CANARY",
+      "mode": "http-status",
+      "expectedStatus": 200
     }
   ]
 }

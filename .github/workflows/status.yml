@@ -33,6 +33,7 @@ jobs:
       - run: npx tsx scripts/generate-status.ts --output=site/status.json
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - run: npm run leakage
       # Verified on 2026-07-12, latest stable: v6.0.0
       - uses: actions/configure-pages@v6.0.0
       # Verified on 2026-07-12, latest stable: v5.0.0

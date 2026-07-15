@@ -3,7 +3,7 @@
 Public status page for Kicoba services.
 
 It shows the current health of Kicoba public-facing surfaces: Landing Page,
-Dashboard, API and Agent Execution. It also keeps a 90-day uptime history and
+App, API, Data Room and Agent Execution. It also keeps a 90-day uptime history and
 recent incidents.
 
 The site is static and served by GitHub Pages, so it stays up during an outage.
@@ -34,14 +34,27 @@ this status page for your own services, edit that one file. It has two parts:
   one component. An `api-status-json` probe reads a JSON object of
   `{ key: status }` and maps each payload key to a component id, so a single
   backend endpoint can report several components at once.
+- `privateProbes` are alpha-only synthetic checks. They fail the monitor workflow
+  without creating public incidents, and they never print the probed URLs.
 
 Probe URLs are never committed. They are provided as repository secrets or
 variables and read from the environment at runtime through the `urlEnv` names in
-the config. The default Kicoba configuration reads:
+the config. The default public Kicoba configuration reads:
 
 - `PROBE_URL_LANDING`
-- `PROBE_URL_DASHBOARD`
+- `PROBE_URL_APP`
+- `PROBE_URL_DATAROOM`
 - `PROBE_URL_API_STATUS`
+
+
+Private alpha checks are configured through these optional secrets:
+
+- `PROBE_URL_PRIVATE_APP_LOGIN`
+- `PROBE_URL_PRIVATE_WAITLIST`
+- `PROBE_URL_PRIVATE_DATAROOM_AUTH_GATE`
+- `PROBE_URL_PRIVATE_AUTOMATION_CANARY`
+
+If a private secret is absent, the private probe is skipped with a sanitized warning.
 
 ## Use it for your own services
 
